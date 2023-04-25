@@ -52,61 +52,66 @@ document.addEventListener("DOMContentLoaded", function () {
   function validateExpression(expression) {}
 
   function convert(current) {
-    // const convertedValue = current
-    //   .replace("×", "*")
-    //   .replace("÷", "/")
-    //   .replace("%", "*0.01")
-    //   .replace("sin", "Math.sin")
-    //   .replace("cos", "Math.cos")
-    //   .replace("ln", "Math.log")
-    //   .replace("π", "Math.PI")
-    //   .replace("log", "Math.log10")
-    //   .replace("e", "Math.E")
-    //   .replace("tan", "Math.tan")
-    //   .replace("√", "Math.sqrt")
-    //   .replace("sin-1", "Math.asin")
-    //   .replace("cos-1", "Math.acos")
-    //   .replace("tan-1", "Math.atan");
-
     const convertedValue = current
       .replace("×", "*")
       .replace("÷", "/")
       .replace("%", "*0.01")
       .replace("π", "Math.PI")
       .replace("e", "Math.E")
-      .replace("√", "Math.sqrt");
-    // .replace("sin", "Math.sin")
-    // .replace("cos", "Math.cos")
-    // .replace("ln", "Math.log")
-    // .replace("log", "Math.log10")
-    // .replace("tan", "Math.tan")
-    // .replace("√", "Math.sqrt")
-    // .replace("sin-1", "Math.asin")
-    // .replace("cos-1", "Math.acos")
-    // .replace("tan-1", "Math.atan");
-    console.log(convertedValue);
+      .replace("√", "Math.sqrt")
+      .replace("sin(", "Math.sin(")
+      .replace("cos(", "Math.cos(")
+      .replace("tan", "Math.tan")
+      .replace("log(", "Math.log10(")
+      .replace("ln(", "Math.log(")
+      .replace("sin-1(", "Math.asin(")
+      .replace("cos-1(", "Math.acos(")
+      .replace("tan-1(", "Math.atan(");
+
     return convertedValue;
   }
 
   function evaluateResult() {
+    currentValue = convert(currentValue);
     if (currentValue.includes("!")) {
-      let numberOfFactorial = 0;
-      for (let i = 0; i < currentValue.length; i++) {
-        if (currentValue[i] == "!") numberOfFactorial++;
-      }
-      if (numberOfFactorial > 1) {
-        throw "Too many factorials";
-      } else {
-        let number = currentValue.match(/\d+/g).map(Number)[0];
-        let fact = factorial(number);
-        currentValue = fact.toString();
-      }
+      // let numberOfFactorial = 0;
+      // for (let i = 0; i < currentValue.length; i++) {
+      //   if (currentValue[i] == "!") numberOfFactorial++;
+      // }
+      // if (numberOfFactorial > 1) {
+      // throw "Too many factorials";
+      // } else {
+      let number = currentValue.match(/\d+/g).map(Number)[0];
+      let fact = factorial(number);
+      currentValue = fact.toString();
+      // }
     } else if (currentValue.includes("^")) {
-      let [x, y] = currentValue.split("^").map(Number);
-      currentValue = `Math.pow(${x},${y})`;
-    }
+      if (currentValue.includes("^√")) {
+        let [x, y] = currentValue.split("^√");
 
-    const result = eval(convert(currentValue));
+        currentValue = `Math.pow(${x}, ${1 / y.slice(1, -1)})`;
+      } else {
+        let [x, y] = currentValue.split("^");
+
+        currentValue = `Math.pow(${x}, ${y})`;
+      }
+    }
+    let result = "";
+
+    // console.log(currentValue);
+    if (angle == "Rad") {
+      result = eval(currentValue);
+    } else {
+      const regex = /[-]?\d+(?:\.\d+)?/g;
+      let rad_angle = currentValue.match(regex)[0];
+      // console.log(rad_angle);
+      let deg_angle = rad_angle * (Math.PI / 180);
+      // console.log(deg_angle)
+      // currentValue.match(regex).replace(deg_angle);
+      currentValue = currentValue.replace(regex, deg_angle);
+
+      result = eval(currentValue);
+    }
 
     if (result != undefined) {
       currentValue = result.toString();
@@ -142,14 +147,19 @@ document.addEventListener("DOMContentLoaded", function () {
     sqrt_btn.innerHTML = "√";
     pow_btn.innerHTML = "x<sup>y</sup>";
   }
+  function randomNumberGenerate(digits = 7) {
+    const rand = Math.random();
+    const num = rand.toFixed(digits);
+    return num;
+  }
 
   let inverse = false;
   let currentValue = "";
   let previousValue = "";
-  let angle = "";
+  let angle = "Rad";
 
   reset();
-
+  let scientific = ["sin", "cos", "tan", "sin-1", "cos-1", "tan-1", "log", "ln"];
   // adding event handlers to every buttons
   for (let i = 0; i < buttons.length; i++) {
     const button = buttons[i];
@@ -169,13 +179,22 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (value == "=") {
           evaluateResult();
           currentValue = "";
+          acc_btn.innerText = "AC";
         } else if (value == "Rad") {
           angle = value;
+          button.classList.remove("text-secondary");
+          const deg_btn = document.getElementById("deg-btn");
+          deg_btn.classList.add("text-secondary");
         } else if (value == "Deg") {
           angle = value;
+          button.classList.remove("text-secondary");
+          const rad_btn = document.getElementById("rad-btn");
+          rad_btn.classList.add("text-secondary");
         } else if (value == "x!") {
-          value = currentValue;
-          currentValue = currentValue + "!";
+          value = display.value;
+          if (!value.includes("!")) {
+            currentValue = value + "!";
+          }
           display.value = currentValue;
         } else if (value == "EXP") {
           value = currentValue;
@@ -183,14 +202,58 @@ document.addEventListener("DOMContentLoaded", function () {
           display.value = currentValue;
         } else if (value == "xy") {
           value = display.value;
-          currentValue = value + "^";
+          if (!value.includes("^")) {
+            currentValue = value + "^";
+          }
+          display.value = currentValue;
+        } else if (value == "ex") {
+          value = Math.E.toString();
+          if (!value.includes("^")) {
+            currentValue = value + "^";
+          }
+          display.value = "e^";
+        } else if (value == "10x") {
+          value = "10";
+          if (!value.includes("^")) {
+            currentValue = value + "^";
+          }
+          display.value = currentValue;
+        } else if (value == "x2") {
+          value = display.value;
+          if (!value.includes("^")) {
+            currentValue = value + "^2";
+          }
+          display.value = currentValue;
+        } else if (value == "y√x") {
+          value = display.value;
+          if (!value.includes("√")) {
+            currentValue = value + "^√(";
+          }
           display.value = currentValue;
         } else if (value == "Ans") {
           display.value = "Ans";
           currentValue = previousValue;
-          // } else if (value == "CE") {
-          // currentValue = currentValue.slice(0, -1);
+        } else if (value == "CE") {
+          if (display.value == "ERROR") {
+            reset();
+          } else {
+            currentValue = currentValue.substring(0, currentValue.length - 1);
+            display.value = currentValue;
+          }
+        } else if (value == "Rnd") {
+          acc_btn.innerText = "CE";
+          const rnd = randomNumberGenerate();
+          value = rnd.toString();
+          currentValue += value;
+          display.value = currentValue;
+        } else if (value == "√") {
+          currentValue = value + "(";
+          display.value = currentValue;
+        } else if (scientific.includes(value)) {
+          currentValue = value + "(";
+          display.value = currentValue;
         } else {
+          acc_btn.innerText = "CE";
           currentValue += value;
           display.value = currentValue;
         }
